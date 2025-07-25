@@ -1,0 +1,11 @@
+
+fastapi
+uvicorn
+sqlalchemy
+pyodbc
+opencv-python
+pytesseract
+PyMuPDF
+pdf2image
+requests 
+ultralytics

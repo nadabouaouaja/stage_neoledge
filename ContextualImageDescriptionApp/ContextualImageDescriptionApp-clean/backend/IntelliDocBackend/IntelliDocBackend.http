@@ -1,0 +1,6 @@
+@IntelliDocBackend_HostAddress = http://localhost:5047
+
+GET {{IntelliDocBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
