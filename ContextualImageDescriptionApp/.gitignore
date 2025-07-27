@@ -34,6 +34,7 @@ ai_service/*.pyd
 ai_service/.Python
 
 ai_service/models/*.pt
+ai_service/yolov8x.pt
 
 ai_service/models/*.pth
 ai_service/models/*.onnx
@@ -41,3 +42,4 @@ ai_service/models/*.bin
 ai_service/models/*.safetensors
 ai_service/yolov8x.pt
 ai_service/models/yolov8x.pt
+ai_service/venv/
