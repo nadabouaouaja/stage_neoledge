@@ -82,7 +82,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy => policy
-            .WithOrigins("http://localhost:8081") 
+            .WithOrigins(
+                "https://contextualimagedescriptionapp-frontend-f4ftg9a4c9gsfhgr.westeurope-01.azurewebsites.net",
+                "http://localhost:8081") 
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
