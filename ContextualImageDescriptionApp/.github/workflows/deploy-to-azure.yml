@@ -1,0 +1,119 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  RESOURCE_GROUP_NAME: ContextualImageDescriptionApp-RG
+  LOCATION: West Europe
+  ACR_NAME: contextualimagedescriptionappacr
+  BACKEND_APP_NAME: contextualimagedescriptionapp-backend
+  FRONTEND_APP_NAME: contextualimagedescriptionapp-frontend
+  AI_APP_NAME: contextualimagedescriptionapp-ai
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Login to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ env.ACR_NAME }}.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+        
+    - name: Build and push Backend image
+      run: |
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }} ./backend
+        docker push ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }}
+        docker tag ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }} ${{ env.ACR_NAME }}.azurecr.io/backend:latest
+        docker push ${{ env.ACR_NAME }}.azurecr.io/backend:latest
+        
+    - name: Build and push Frontend image
+      run: |
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }} ./frontend
+        docker push ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }}
+        docker tag ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }} ${{ env.ACR_NAME }}.azurecr.io/frontend:latest
+        docker push ${{ env.ACR_NAME }}.azurecr.io/frontend:latest
+        
+    - name: Build and push AI Service image
+      run: |
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/ai-service:${{ github.sha }} ./ai_service
+        docker push ${{ env.ACR_NAME }}.azurecr.io/ai-service:${{ github.sha }}
+        docker tag ${{ env.ACR_NAME }}.azurecr.io/ai-service:${{ github.sha }} ${{ env.ACR_NAME }}.azurecr.io/ai-service:latest
+        docker push ${{ env.ACR_NAME }}.azurecr.io/ai-service:latest
+        
+    - name: Deploy Backend to Azure App Service
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.BACKEND_APP_NAME }}
+        images: ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }}
+        
+    - name: Deploy Frontend to Azure App Service
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.FRONTEND_APP_NAME }}
+        images: ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }}
+        
+    - name: Deploy AI Service to Azure App Service
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AI_APP_NAME }}
+        images: ${{ env.ACR_NAME }}.azurecr.io/ai-service:${{ github.sha }}
+        
+    - name: Update App Service Configuration
+      run: |
+        # Update Backend App Service
+        az webapp config container set \
+          --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
+          --name ${{ env.BACKEND_APP_NAME }} \
+          --docker-custom-image-name ${{ env.ACR_NAME }}.azurecr.io/backend:latest \
+          --docker-registry-server-url https://${{ env.ACR_NAME }}.azurecr.io \
+          --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
+          --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
+          
+        # Update Frontend App Service
+        az webapp config container set \
+          --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
+          --name ${{ env.FRONTEND_APP_NAME }} \
+          --docker-custom-image-name ${{ env.ACR_NAME }}.azurecr.io/frontend:latest \
+          --docker-registry-server-url https://${{ env.ACR_NAME }}.azurecr.io \
+          --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
+          --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
+          
+        # Update AI Service App Service
+        az webapp config container set \
+          --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
+          --name ${{ env.AI_APP_NAME }} \
+          --docker-custom-image-name ${{ env.ACR_NAME }}.azurecr.io/ai-service:latest \
+          --docker-registry-server-url https://${{ env.ACR_NAME }}.azurecr.io \
+          --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
+          --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
+          
+    - name: Restart App Services
+      run: |
+        az webapp restart --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name ${{ env.BACKEND_APP_NAME }}
+        az webapp restart --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name ${{ env.FRONTEND_APP_NAME }}
+        az webapp restart --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name ${{ env.AI_APP_NAME }}
+        
+    - name: Display deployment URLs
+      run: |
+        echo "Deployment completed successfully!"
+        echo "Backend: https://${{ env.BACKEND_APP_NAME }}.azurewebsites.net"
+        echo "Frontend: https://${{ env.FRONTEND_APP_NAME }}.azurewebsites.net"
+        echo "AI Service: https://${{ env.AI_APP_NAME }}.azurewebsites.net" 

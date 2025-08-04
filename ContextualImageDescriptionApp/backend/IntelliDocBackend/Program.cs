@@ -87,6 +87,15 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod());
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins("https://contextualimagedescriptionapp-frontend-f4ftg9a4c9gsfhgr.westeurope-01.azurewebsites.net")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
+app.UseCors("AllowFrontend");
 
 var app = builder.Build();
 

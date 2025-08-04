@@ -1,6 +1,6 @@
 import requests
 
-def generate_description_with_ollama(prompt, model="llama3"):
+def generate_description_with_ollama(prompt, model="gemma:2b"):
     url = "http://localhost:11434/api/generate"
     payload = {
         "model": model,
@@ -13,7 +13,8 @@ def generate_description_with_ollama(prompt, model="llama3"):
 
 def generate_description(image_path, objects, text):
     prompt = (
-        "Décris l'image en 10 mots, sans expliquer ni introduire, juste la description. "
-        f"Objets détectés: {', '.join(objects)}. Texte extrait: {text[:200]}"
+        f"<system>You are a direct analyzer. NEVER use phrases like 'Sure, here's', 'Here is', or any introductions. Respond with ONLY the description.</system>\n"
+        f"Objects: {', '.join(objects)}. Text: {text[:300]}. "
+        "Contextual description in 10 words:"
     )
-    return generate_description_with_ollama(prompt) 
+    return generate_description_with_ollama(prompt, "gemma:2b") 
