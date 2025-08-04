@@ -1,4 +1,4 @@
-# Dockerfile pour le Backend .NET Core optimisé pour Azure
+# Étape 1 : base runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
@@ -7,6 +7,7 @@ EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 
+# Étape 2 : build
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY ["IntelliDocBackend/IntelliDocBackend.csproj", "IntelliDocBackend/"]
@@ -15,10 +16,13 @@ COPY . .
 WORKDIR "/src/IntelliDocBackend"
 RUN dotnet build "IntelliDocBackend.csproj" -c Release -o /app/build
 
+# Étape 3 : publish
 FROM build AS publish
 RUN dotnet publish "IntelliDocBackend.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
+# Étape 4 : image finale
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "IntelliDocBackend.dll"] 
+COPY IntelliDocBackend/uploads ./uploads
+ENTRYPOINT ["dotnet", "IntelliDocBackend.dll"]
